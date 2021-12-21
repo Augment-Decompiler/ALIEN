@@ -19,26 +19,29 @@ This is an example of the `.ans.json` file:
 ```
 {
     "ModuleInfo": {
-        "ida_num_total": 4831,
-        "ida_none_num_total": 683,
-        "ida_has_dwarf_total": 306,
-        "ida_reg_num_total": 4357,
-        "ida_stack_num_total": 474,
-        "dwarf_num_total": 2156,
-        "dwarf_none_num_total": 585,
-        "dwarf_reg_num_total": 1128,
-        "dwarf_stack_num_total": 215,
-        "dwarf_poly_num_total": 78,
-        "dwarf_unknown_num_total": 150,
-        "ans_ida_identified_num_total": 194
+        "ida_num_total": 4815,
+        "ida_none_num_total": 346,
+        "ida_has_dwarf_total": 337,
+        "ida_reg_num_total": 4261,
+        "ida_stack_num_total": 553,
+        "inlined_num": 584,
+        "declared_inline_num": 22,
+        "has_inlinee_num": 650,
+        "dwarf_num_total": 2118,
+        "dwarf_none_num_total": 584,
+        "dwarf_reg_num_total": 992,
+        "dwarf_stack_num_total": 254,
+        "dwarf_poly_num_total": 224,
+        "dwarf_unknown_num_total": 64,
+        "ans_ida_identified_num_total": 296
     },
     "FunctionInfo": [
         {
-            "func_name": "errorlimit",
-            "ida_num": 6,
-            "ida_none_num": 1,
+            "func_name": "js_stackoverflow",
+            "ida_num": 2,
+            "ida_none_num": 0,
             "ida_has_dwarf": 0,
-            "ida_reg_num": 6,
+            "ida_reg_num": 2,
             "ida_stack_num": 0,
             "dwarf_num": 0,
             "dwarf_none_num": 0,
@@ -47,7 +50,8 @@ This is an example of the `.ans.json` file:
             "dwarf_poly_num": 0,
             "dwarf_unknown_num": 0,
             "ans_ida_identified_num": 0
-        }
+        },
     ···
     ]
+}
 ```
