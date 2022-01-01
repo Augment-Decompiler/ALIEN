@@ -36,16 +36,16 @@ def set_color(ea, color):
 lists:          the lists of the range [[x,y], ....]
 range_info:     the range [x1, y1]
 
-return the idx of the overlap range with range_info in lists, or return the where is should be inserted to keep the monotonically increase
+return the idx of the adjacent range with range_info in lists, or return where it should be inserted to keep the monotonically increase
 
-the the overlap situation can only be
+the adjacent situation can only be
 lists[i][0] < lists[i][1] + 1 == x1 < y1
 
 or
 
-x1 < y1 <= lists[i][0] - 1 < lists[i][1]
+x1 < y1 == lists[i][0] - 1 < lists[i][1]
 '''
-def get_overlap_idx(lists, range_info):
+def get_adjacent_idx(lists, range_info):
     if(len(lists) == 0):
         return 0
     
@@ -67,6 +67,9 @@ def get_overlap_idx(lists, range_info):
             right = middle - 1
 
     return left
+
+
+
 
 '''
 the handler class
@@ -190,9 +193,13 @@ class ALIEN(idaapi.plugin_t):
 
                 if("inlinee_list" in function_info):
                     '''
-                    set the adjacent range with same color
+                    set the adjacent range with same color in same name
                     so use {name:[[x, y]], ...} to record the range
                     it will merge the adjacent range
+
+                    however，to avoid the same color in adjacent range in different name
+                    so use {point:color} to record the two endpoints as well as its color
+                    it will be defined below as points_color
                     '''
                     dics = {}
 
@@ -205,22 +212,31 @@ class ALIEN(idaapi.plugin_t):
                                 # merge the adjacent range
                                 if(inlinee_info['name'] not in dics):
                                     dics[inlinee_info['name']] = []
+                                adjacent_idx = get_adjacent_idx(dics[inlinee_info['name']], range_info)
 
-                                overlap_idx = get_overlap_idx(dics[inlinee_info['name']], range_info)
-                                if(overlap_idx == len(dics[inlinee_info['name']])):
+                                if(adjacent_idx == len(dics[inlinee_info['name']])):
+                                    # should insert into the last
                                     dics[inlinee_info['name']].append([range_info[0], range_info[1]])
-                                elif(overlap_idx + 1 < len(dics[inlinee_info['name']]) and dics[inlinee_info['name']][overlap_idx][1] == (range_info[0] - 1) and dics[inlinee_info['name']][overlap_idx + 1][0] == (range_info[1] + 1)):
-                                    dics[inlinee_info['name']][overlap_idx][1] = dics[inlinee_info['name']][overlap_idx][1]
-                                    del dics[inlinee_info['name']][overlap_idx + 1]
-                                elif(overlap_idx - 1 >= 0 and dics[inlinee_info['name']][overlap_idx - 1][1] == (range_info[0] - 1) and dics[inlinee_info['name']][overlap_idx][0] == (range_info[1] + 1)):
-                                    dics[inlinee_info['name']][overlap_idx - 1][1] = dics[inlinee_info['name']][overlap_idx][1]
-                                    del dics[inlinee_info['name']][overlap_idx]
-                                elif(dics[inlinee_info['name']][overlap_idx][1] == (range_info[0] - 1)):
-                                    dics[inlinee_info['name']][overlap_idx][1] = range_info[1]
-                                elif(dics[inlinee_info['name']][overlap_idx][0] == (range_info[1] + 1)):
-                                    dics[inlinee_info['name']][overlap_idx][0] = range_info[0]
+                                elif(adjacent_idx + 1 < len(dics[inlinee_info['name']]) \
+                                    and dics[inlinee_info['name']][adjacent_idx][1] == (range_info[0] - 1) \
+                                    and dics[inlinee_info['name']][adjacent_idx + 1][0] == (range_info[1] + 1)):
+                                    # merge the adjacent_idx, range_info as well as adjacent_idx + 1
+                                    dics[inlinee_info['name']][adjacent_idx][1] = dics[inlinee_info['name']][adjacent_idx + 1][1]
+                                    del dics[inlinee_info['name']][adjacent_idx + 1]
+                                elif(adjacent_idx - 1 >= 0 \
+                                    and dics[inlinee_info['name']][adjacent_idx - 1][1] == (range_info[0] - 1) \
+                                    and dics[inlinee_info['name']][adjacent_idx][0] == (range_info[1] + 1)):
+                                    # merge the adjacent_idx - 1, range_info as well as adjacent_idx
+                                    dics[inlinee_info['name']][adjacent_idx - 1][1] = dics[inlinee_info['name']][adjacent_idx][1]
+                                    del dics[inlinee_info['name']][adjacent_idx]
+                                elif(dics[inlinee_info['name']][adjacent_idx][1] == (range_info[0] - 1)):
+                                    # merge the range_info as well as adjacent_idx
+                                    dics[inlinee_info['name']][adjacent_idx][1] = range_info[1]
+                                elif(dics[inlinee_info['name']][adjacent_idx][0] == (range_info[1] + 1)):
+                                    # merge the range_info as well as adjacent_idx
+                                    dics[inlinee_info['name']][adjacent_idx][0] = range_info[0]
                                 else:
-                                    dics[inlinee_info['name']].insert(overlap_idx, [range_info[0], range_info[1]])
+                                    dics[inlinee_info['name']].insert(adjacent_idx, [range_info[0], range_info[1]])
 
 
                                 #print('comment ' + inlinee_info['name'] + '-range_info: [' + hex(range_info[0]) + ', ' + hex(range_info[1]) + ']')
@@ -238,12 +254,30 @@ class ALIEN(idaapi.plugin_t):
 
                                 
 
+                    points_color = {}
                     #set the color
                     for key in dics.keys():
+                        color_idx = 0
+
                         for i in range(len(dics[key])):
-                            #print('color ' + key + '-range_info: [' + hex(dics[key][i][0]) + ', ' + hex(dics[key][i][1]) + ']' + ' ' + str(self.color_list[i % len(self.color_list)]))
-                            for ea in range(dics[key][i][0], dics[key][i][1]):
-                                set_color(ea, self.color_list[i % len(self.color_list)])
+                            '''
+                                avoid the same color in adjacent range with different name
+                                if there exists the adjacent range,
+                                it must ranges with different name——or it will be merged before
+                            '''
+                            if((dics[key][i][0] - 1) in points_color and points_color[dics[key][i][0] - 1] == color_idx):
+                                color_idx = (color_idx + 1) %len(self.color_list)
+                            if((dics[key][i][1] + 1) in points_color and points_color[dics[key][i][1] + 1] == color_idx):
+                                color_idx = (color_idx + 1) %len(self.color_list)
+
+                            points_color[dics[key][i][0]] = points_color[dics[key][i][1]] = color_idx
+
+                            for ea in range(dics[key][i][0], dics[key][i][1] + 1):
+                                set_color(ea, self.color_list[color_idx])
+
+                            #print('color ' + key + '-range_info: [' + hex(dics[key][i][0]) + ', ' + hex(dics[key][i][1]) + ']' + ' ' + str(self.color_list[color_idx]))
+
+                            color_idx = (color_idx + 1) % len(self.color_list)
         
         print("Alien: finish analysis")
         print('================================================================================')
